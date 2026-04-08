@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import uuid
 
 
@@ -99,3 +99,106 @@ class ScanResult:
         if self.scan_end:
             return (self.scan_end - self.scan_start).total_seconds()
         return 0.0
+
+
+# ── Breach Simulation Models ──
+
+class KillChainPhase(Enum):
+    RECONNAISSANCE = "Reconnaissance"
+    INITIAL_ACCESS = "Initial Access"
+    EXECUTION = "Execution"
+    PERSISTENCE = "Persistence"
+    PRIVILEGE_ESCALATION = "Privilege Escalation"
+    LATERAL_MOVEMENT = "Lateral Movement"
+    EXFILTRATION = "Exfiltration"
+
+
+@dataclass
+class AttackStep:
+    phase: KillChainPhase
+    name: str
+    module_key: str
+    method_name: str
+    description: str
+    depends_on_success: bool = False
+    http_request: Optional[str] = None
+    http_response: Optional[str] = None
+    status: str = "pending"  # pending | running | success | failed | skipped
+    finding: Optional[Finding] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+
+
+@dataclass
+class BreachScenario:
+    id: str
+    name: str
+    description: str
+    icon: str
+    steps: List[AttackStep] = field(default_factory=list)
+
+    @property
+    def kill_chain_phases(self) -> List[KillChainPhase]:
+        seen = []
+        for s in self.steps:
+            if s.phase not in seen:
+                seen.append(s.phase)
+        return seen
+
+
+@dataclass
+class BreachSimulationResult:
+    scenario: BreachScenario
+    started_at: datetime = field(default_factory=datetime.now)
+    finished_at: Optional[datetime] = None
+    steps_completed: int = 0
+    breach_successful: bool = False
+
+    @property
+    def duration(self) -> float:
+        if self.finished_at:
+            return (self.finished_at - self.started_at).total_seconds()
+        return 0.0
+
+    @property
+    def findings(self) -> List[Finding]:
+        return [s.finding for s in self.scenario.steps if s.finding]
+
+
+# ── Self-Healing Models ──
+
+class HealingStatus(Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    SUCCESS = "success"
+    FAILED = "failed"
+    VERIFIED = "verified"
+
+
+HEALING_STATUS_COLORS = {
+    HealingStatus.PENDING: "#7a8599",
+    HealingStatus.IN_PROGRESS: "#3b82f6",
+    HealingStatus.SUCCESS: "#22c55e",
+    HealingStatus.FAILED: "#ff4444",
+    HealingStatus.VERIFIED: "#a855f7",
+}
+
+
+@dataclass
+class HealingAction:
+    id: str
+    finding_id: str
+    finding_name: str
+    finding_category: str
+    finding_severity: Severity
+    action_type: str  # isolate_agent, rotate_tokens, restore_config, etc.
+    description: str
+    api_endpoint: str
+    api_method: str  # POST, PUT, DELETE
+    api_payload: Dict[str, Any] = field(default_factory=dict)
+    status: HealingStatus = HealingStatus.PENDING
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    response_code: Optional[int] = None
+    response_body: Optional[str] = None
+    verification_result: Optional[str] = None

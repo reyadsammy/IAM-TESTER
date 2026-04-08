@@ -26,3 +26,10 @@ class ScanConfig:
     # Known default keys from the target system
     default_secret_key: str = "your-secret-key-change-in-production"
     default_encryption_key: str = "your-encryption-key-32-chars-long!"
+
+    # Target type: "iam" (Agentic IAM) or "store" (IAM Store)
+    target_type: str = "iam"
+
+    # Self-healing settings
+    healing_enabled: bool = True
+    healing_verify: bool = True

@@ -21,6 +21,7 @@ from attacks.input_validation import InputValidationAttacks
 from attacks.business_logic import BusinessLogicAttacks
 from attacks.dos_ratelimit import DoSRateLimitAttacks
 from attacks.compliance import ComplianceAttacks
+from attacks.store_security import StoreSecurityAttacks
 
 # Ordered by priority (most critical first)
 ATTACK_MODULES = [
@@ -38,7 +39,13 @@ ATTACK_MODULES = [
     ("compliance", ComplianceAttacks),
 ]
 
+# Store-specific module (added when target_type is "store")
+STORE_MODULES = [
+    ("store_security", StoreSecurityAttacks),
+]
+
 ALL_CATEGORIES = [name for name, _ in ATTACK_MODULES]
+ALL_STORE_CATEGORIES = [name for name, _ in ATTACK_MODULES + STORE_MODULES]
 
 
 class TestRunner:
@@ -57,7 +64,10 @@ class TestRunner:
 
     def get_modules(self):
         """Get filtered list of modules to run."""
-        modules = ATTACK_MODULES
+        modules = list(ATTACK_MODULES)
+        # Add store-specific modules when targeting the store
+        if self.config.target_type == "store":
+            modules = modules + STORE_MODULES
         if self.config.categories:
             modules = [(n, c) for n, c in modules if n in self.config.categories]
         if self.config.skip_dos:
